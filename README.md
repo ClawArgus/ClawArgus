@@ -22,15 +22,15 @@
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-tools">Tools</a> •
   <a href="#-methodology">Methodology</a> •
-  <a href="#-use-cases">Use Cases</a> •
-  <a href="#-examples">Examples</a>
+  <a href="#-security--scope">Security & Scope</a> •
+  <a href="#-use-cases">Use Cases</a>
 </p>
 
 ---
 
 ## 🧠 What is CLAW ARGUS?
 
-**CLAW ARGUS** is an enterprise-grade, autonomous AI research agent. It performs multi-layered investigations across the web, cross-validates findings, detects bias, extracts structured entities, and generates professional intelligence reports — all autonomously.
+**CLAW ARGUS** is an autonomous AI research agent. It performs multi-layered investigations across the public web, cross-validates findings, detects bias, extracts structured entities, and generates professional intelligence reports.
 
 Think of it as your personal **100-eyed research analyst** that never sleeps, never gets tired, and processes information from multiple sources simultaneously.
 
@@ -47,7 +47,7 @@ Think of it as your personal **100-eyed research analyst** that never sleeps, ne
 ### 🔍 Multi-Engine Search
 Searches across **DuckDuckGo**, **Wikipedia**, and **Wikidata** simultaneously for maximum coverage
 
-### 🧬 Entity Extraction  
+### 🧬 Entity Extraction
 Regex-based NER pulls out **people, organizations, dates, monetary values, percentages, emails, and URLs**
 
 ### 🛡️ Bias Detection
@@ -74,7 +74,6 @@ Structured intelligence reports with **confidence scoring, risk assessment, and 
 - ⚡ **In-memory caching** with 5-minute TTL — no redundant API calls
 - 🔄 **Retry with exponential backoff** — resilient against transient failures
 - 🧩 **7 modular tools** — each independently testable and extensible
-- 📦 **Minimal dependencies** — only `requests` 
 
 ---
 
@@ -83,20 +82,32 @@ Structured intelligence reports with **confidence scoring, risk assessment, and 
 ### Prerequisites
 
 - Python 3.10+
-- An OpenAI API key (or any LLM provider)
+- An OpenAI API key (or compatible LLM provider)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/ARGURAIgent/Claw-Argus.git
-cd ARGURAI
+git clone https://github.com/ClawArgus/ClawArgus
+cd ClawArgus
+
+# Install dependencies
+pip install -r requirements.txt
 
 # Set your API key
 export OPENAI_API_KEY="your-key-here"        # Linux/Mac
 set OPENAI_API_KEY=your-key-here             # Windows CMD
 $env:OPENAI_API_KEY="your-key-here"          # PowerShell
 ```
+
+### Dependencies
+
+Runtime deps are intentionally small:
+
+- **`requests`** — HTTP client for search and fetch
+- **An LLM SDK of your choice** (e.g. `openai`) — for the agent loop
+
+There is no hidden agent framework pulling in a deep dependency tree. The tool functions in `argus_agent.py` are plain Python and can be driven by any LLM orchestrator you prefer.
 
 ### Run
 
@@ -117,7 +128,7 @@ ARGUS comes equipped with **7 specialized tools** the agent invokes autonomously
 | # | Tool | Description |
 |---|------|-------------|
 | 1 | `web_search` | Multi-engine search across DuckDuckGo, Wikipedia, and Wikidata with caching |
-| 2 | `fetch_url_content` | Deep content extraction with HTML stripping, structural analysis, and deduplication |
+| 2 | `fetch_url_content` | Content extraction with HTML stripping, structural analysis, and deduplication |
 | 3 | `wikipedia_summary` | Dedicated Wikipedia deep-dive with categories, metadata, and reliability assessment |
 | 4 | `extract_entities` | Regex-based NER: people/orgs, dates, money, percentages, emails, URLs |
 | 5 | `analyze_text` | Sentiment + bias detection + bigrams + readability + thematic classification |
@@ -163,6 +174,28 @@ Sources are prioritized by reliability:
 
 ---
 
+## 🔒 Security & Scope
+
+ARGUS is designed as a **local research tool**. Please read this section before deploying it anywhere that accepts untrusted input.
+
+### Intended use
+- Running locally or in a trusted environment where the operator controls the research prompt.
+- Authorized OSINT, market research, academic review, and similar analyst workflows.
+
+### Not intended (without additional hardening)
+- Public-facing services or multi-tenant deployments. `fetch_url_content` will retrieve any URL the agent decides to visit, which means an attacker who controls the prompt or the search results could attempt **Server-Side Request Forgery (SSRF)** against internal hosts (`127.0.0.1`, `169.254.169.254`, RFC1918 ranges, etc.). If you deploy ARGUS as a service, put `fetch_url_content` behind an allowlist, block private IP ranges after DNS resolution, and cap redirects.
+
+### Outbound HTTP identification
+ARGUS identifies itself in the `User-Agent` header as `ARGUS/<version>` with a link back to this repository. It does not spoof a browser. Some sites may rate-limit or block non-browser clients; respect `robots.txt` and each site's terms of service.
+
+### API keys
+The agent reads `OPENAI_API_KEY` (or your chosen provider key) from the environment. Never commit keys, and never paste a production key into a prompt that gets logged.
+
+### Repository hygiene
+`.claude/`, `.env`, local settings, and cache files should be listed in `.gitignore`. Do not commit machine-specific auto-approval files.
+
+---
+
 ## 💼 Use Cases
 
 ### 📈 Market Research & Competitive Intelligence
@@ -183,7 +216,6 @@ Conduct literature reviews and technical deep-dives. ARGUS decomposes research q
 ```python
 from argus_agent import argus_agent
 
-# Run a research task
 result = argus_agent.run(
     "What are the latest developments in quantum computing? "
     "Who are the key players and what are the risks?"
@@ -195,19 +227,11 @@ print(result)
 ### Using Individual Tools
 
 ```python
-from deeprecon_agent import web_search, analyze_text, extract_entities
+from argus_agent import web_search, analyze_text, extract_entities
 
-# Search the web
 results = web_search("autonomous AI agents 2025")
-print(results)
-
-# Analyze text for sentiment and bias
 analysis = analyze_text("The revolutionary AI breakthrough will transform everything...")
-print(analysis)
-
-# Extract entities from text
 entities = extract_entities("OpenAI raised $6.6 billion in October 2024...")
-print(entities)
 ```
 
 ### Sample Report Output
@@ -235,9 +259,10 @@ print(entities)
 ## 📁 Project Structure
 
 ```
-ARGURAI/
+ClawArgus/
 ├── argus_agent.py        # Main agent implementation (all tools + agent config)
-├── argus_logo.jpg    # Agent marketplace image (800×800)
+├── argus_logo.jpg        # Agent marketplace image (800×800)
+├── requirements.txt      # Runtime dependencies
 ├── README.md             # This file
 ├── LICENSE               # MIT License
 └── .gitignore            # Git ignore rules
@@ -264,6 +289,9 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 ---
 
 ## 🔗 Links
+
+- **Repository:** https://github.com/ClawArgus/ClawArgus
+- **Issues & feature requests:** https://github.com/ClawArgus/ClawArgus/issues
 
 ---
 

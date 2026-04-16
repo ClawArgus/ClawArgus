@@ -7,7 +7,6 @@ detects bias, and generates comprehensive intelligence reports with
 confidence scoring, source attribution, and exportable markdown output.
 
 Named after Argus Panoptes, the all-seeing giant of Greek mythology.
-Built on the Swarms framework for production-ready agent orchestration.
 
 Author: ARGUS Labs
 Version: 2.0.0
@@ -18,13 +17,15 @@ import os
 import re
 import json
 import hashlib
+import inspect
 import requests
 import time
 import functools
 from collections import Counter
 from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime, timezone
-from swarms import Agent
+
+from openai import OpenAI
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -75,11 +76,7 @@ def _retry(max_attempts: int = 3, delay: float = 1.0):
 
 
 _HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    )
+    "User-Agent": "ARGUS/2.0 (+https://github.com/ClawArgus/ClawArgus)"
 }
 
 _STOP_WORDS = frozenset({
@@ -974,7 +971,108 @@ Prioritize sources in this order:
 # AGENT INITIALIZATION
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-argus_agent = Agent(
+_JSON_TYPE_MAP = {
+    str: "string",
+    int: "integer",
+    float: "number",
+    bool: "boolean",
+}
+
+
+def _build_tool_schema(func: Callable) -> Dict[str, Any]:
+    sig = inspect.signature(func)
+    properties: Dict[str, Any] = {}
+    required: List[str] = []
+    for name, param in sig.parameters.items():
+        json_type = _JSON_TYPE_MAP.get(param.annotation, "string")
+        properties[name] = {"type": json_type}
+        if param.default is inspect.Parameter.empty:
+            required.append(name)
+    doc = (func.__doc__ or "").strip().split("\n\n", 1)[0]
+    return {
+        "type": "function",
+        "function": {
+            "name": func.__name__,
+            "description": doc[:1024],
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+                "required": required,
+            },
+        },
+    }
+
+
+class ArgusAgent:
+    """
+    Minimal tool-calling loop around the OpenAI Chat Completions API.
+
+    Holds the system prompt, the tool registry, and a .run(task) entry point
+    that drives the model-tool-model cycle until the model returns a final
+    answer or max_loops is exceeded.
+    """
+
+    def __init__(
+        self,
+        agent_name: str,
+        agent_description: str,
+        system_prompt: str,
+        model_name: str,
+        tools: List[Callable],
+        max_loops: int = 5,
+        verbose: bool = True,
+    ):
+        self.agent_name = agent_name
+        self.agent_description = agent_description
+        self.system_prompt = system_prompt
+        self.model_name = model_name
+        self.max_loops = max_loops
+        self.verbose = verbose
+        self._tools_by_name = {t.__name__: t for t in tools}
+        self._tool_schemas = [_build_tool_schema(t) for t in tools]
+        self._client = OpenAI()
+
+    def run(self, task: str) -> str:
+        messages: List[Dict[str, Any]] = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": task},
+        ]
+
+        for loop in range(self.max_loops):
+            response = self._client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                tools=self._tool_schemas,
+                tool_choice="auto",
+            )
+            msg = response.choices[0].message
+            messages.append(msg.model_dump(exclude_none=True))
+
+            if not msg.tool_calls:
+                return msg.content or ""
+
+            for call in msg.tool_calls:
+                fn = self._tools_by_name.get(call.function.name)
+                if self.verbose:
+                    print(f"  🔧 [loop {loop + 1}] {call.function.name}({call.function.arguments})")
+                if fn is None:
+                    result = f"Unknown tool: {call.function.name}"
+                else:
+                    try:
+                        args = json.loads(call.function.arguments or "{}")
+                        result = fn(**args)
+                    except Exception as exc:
+                        result = f"Error running {call.function.name}: {exc}"
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": str(result),
+                })
+
+        return "Max tool loops reached without a final answer."
+
+
+argus_agent = ArgusAgent(
     agent_name="ARGUS",
     agent_description=(
         "ARGUS — The All-Seeing Research & Intelligence Agent v2.0. "
@@ -987,13 +1085,6 @@ argus_agent = Agent(
     system_prompt=ARGUS_SYSTEM_PROMPT,
     model_name="gpt-4o-mini",
     max_loops=5,
-    autosave=True,
-    verbose=True,
-    dynamic_temperature_enabled=True,
-    saved_state_path="argus_state.json",
-    retry_attempts=3,
-    context_length=128000,
-    output_type="string",
     tools=[
         web_search,
         fetch_url_content,
@@ -1003,7 +1094,6 @@ argus_agent = Agent(
         compare_sources,
         generate_report,
     ],
-    tool_choice="auto",
 )
 
 

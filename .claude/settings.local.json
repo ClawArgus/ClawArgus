@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git -C \"C:/Users/ADMIN/Downloads/new projects/project7.1\" status)",
-      "Bash(git -C \"C:/Users/ADMIN/Downloads/new projects/project7.1\" log --oneline -5)"
+      "Bash(git -C \"C:/Users/ADMIN/Downloads/new projects/project7.1\" log --oneline -5)",
+      "Bash(python *)"
     ]
   }
 }
