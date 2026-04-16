@@ -14,9 +14,7 @@
 
 <p align="center">
   <a href="#-quick-start"><img src="https://img.shields.io/badge/python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+" /></a>
-  <a href="https://github.com/kyegomez/swarms"><img src="https://img.shields.io/badge/framework-swarms-ff6b35?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAyMmgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=&logoColor=white" alt="Swarms Framework" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License" /></a>
-  <a href="https://swarms.world"><img src="https://img.shields.io/badge/marketplace-swarms.world-purple?style=for-the-badge" alt="Swarms Marketplace" /></a>
 </p>
 
 <p align="center">
@@ -32,7 +30,7 @@
 
 ## 🧠 What is CLAW ARGUS?
 
-**CLAW ARGUS** is an enterprise-grade, autonomous AI research agent built on the [Swarms](https://github.com/kyegomez/swarms) framework. It performs multi-layered investigations across the web, cross-validates findings, detects bias, extracts structured entities, and generates professional intelligence reports — all autonomously.
+**CLAW ARGUS** is an enterprise-grade, autonomous AI research agent. It performs multi-layered investigations across the web, cross-validates findings, detects bias, extracts structured entities, and generates professional intelligence reports — all autonomously.
 
 Think of it as your personal **100-eyed research analyst** that never sleeps, never gets tired, and processes information from multiple sources simultaneously.
 
@@ -76,7 +74,7 @@ Structured intelligence reports with **confidence scoring, risk assessment, and 
 - ⚡ **In-memory caching** with 5-minute TTL — no redundant API calls
 - 🔄 **Retry with exponential backoff** — resilient against transient failures
 - 🧩 **7 modular tools** — each independently testable and extensible
-- 📦 **Minimal dependencies** — only `requests` + `swarms`
+- 📦 **Minimal dependencies** — only `requests` 
 
 ---
 
@@ -85,7 +83,7 @@ Structured intelligence reports with **confidence scoring, risk assessment, and 
 ### Prerequisites
 
 - Python 3.10+
-- An OpenAI API key (or any LLM provider supported by Swarms)
+- An OpenAI API key (or any LLM provider)
 
 ### Installation
 
@@ -93,9 +91,6 @@ Structured intelligence reports with **confidence scoring, risk assessment, and 
 # Clone the repository
 git clone https://github.com/ARGURAIgent/Claw-Argus.git
 cd ARGURAI
-
-# Install dependencies
-pip install -U swarms requests
 
 # Set your API key
 export OPENAI_API_KEY="your-key-here"        # Linux/Mac
@@ -270,10 +265,6 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 ## 🔗 Links
 
-- **Swarms Marketplace:** [swarms.world](https://swarms.world)
-- **Swarms Framework:** [github.com/kyegomez/swarms](https://github.com/kyegomez/swarms)
-- **Documentation:** [docs.swarms.world](https://docs.swarms.world)
-
 ---
 
 <p align="center">
@@ -281,5 +272,5 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 </p>
 
 <p align="center">
-  <sub>Built with ❤️ by ARGUS Labs — Powered by the Swarms Framework</sub>
+  <sub>Built with ❤️ by ARGUS Labs</sub>
 </p>
