@@ -27,6 +27,12 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
+try:
+    from tavily import TavilyClient
+    _TAVILY_AVAILABLE = True
+except ImportError:
+    _TAVILY_AVAILABLE = False
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # UTILITIES — Caching, retries, and shared helpers
@@ -112,7 +118,7 @@ def _clean_html(raw_html: str) -> str:
 def web_search(query: str, num_results: int = 8) -> str:
     """
     Perform a multi-engine web search across DuckDuckGo, Wikipedia,
-    and Wikidata to gather diverse, structured results.
+    Wikidata, and optionally Tavily to gather diverse, structured results.
 
     Uses in-memory caching to avoid redundant requests for the same query.
     Includes automatic retry with exponential backoff on transient failures.
@@ -230,6 +236,24 @@ def web_search(query: str, num_results: int = 8) -> str:
             })
     except Exception as e:
         results.append({"error": f"Wikidata: {e}"})
+
+    # ── Tavily Search (optional, requires TAVILY_API_KEY) ─────────────
+    if _TAVILY_AVAILABLE and os.environ.get("TAVILY_API_KEY"):
+        try:
+            tavily_client = TavilyClient()
+            tavily_resp = tavily_client.search(query, max_results=num_results)
+            engines_ok.append("Tavily")
+
+            for item in tavily_resp.get("results", []):
+                results.append({
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "snippet": item.get("content", ""),
+                    "source": "Tavily",
+                    "relevance": "high" if item.get("score", 0) > 0.5 else "medium",
+                })
+        except Exception as e:
+            results.append({"error": f"Tavily: {e}"})
 
     output = json.dumps({
         "query": query,
@@ -776,7 +800,7 @@ def generate_report(
         "sources_consulted": source_list,
         "source_count": len(source_list),
         "collection_methods": [
-            "Multi-engine web intelligence gathering (DuckDuckGo, Wikipedia, Wikidata)",
+            "Multi-engine web intelligence gathering (DuckDuckGo, Wikipedia, Wikidata, Tavily)",
             "Deep content extraction and parsing",
             "Named entity recognition (regex-based NER)",
             "Cross-reference validation with Jaccard similarity",
@@ -898,7 +922,7 @@ You ALWAYS think step-by-step, cite your sources, and flag uncertainty.
 
 | Tool                | Purpose                                              |
 |---------------------|------------------------------------------------------|
-| web_search          | Search DuckDuckGo + Wikipedia + Wikidata             |
+| web_search          | Search DuckDuckGo + Wikipedia + Wikidata + Tavily    |
 | fetch_url_content   | Extract clean text from any URL                      |
 | wikipedia_summary   | Get detailed Wikipedia article summaries             |
 | extract_entities    | Pull out people, dates, money, orgs from text        |
@@ -1076,7 +1100,7 @@ argus_agent = ArgusAgent(
     agent_name="ARGUS",
     agent_description=(
         "ARGUS — The All-Seeing Research & Intelligence Agent v2.0. "
-        "Performs multi-engine search (DuckDuckGo, Wikipedia, Wikidata), "
+        "Performs multi-engine search (DuckDuckGo, Wikipedia, Wikidata, Tavily), "
         "deep content extraction, entity recognition, sentiment & bias "
         "analysis, cross-source validation, and generates structured "
         "intelligence reports with confidence scoring, risk assessment, "
